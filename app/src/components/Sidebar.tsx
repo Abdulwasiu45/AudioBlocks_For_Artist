@@ -26,8 +26,9 @@ import { getTotalUnreadCount } from "@/services/messageService";
 import { subscribeToInboxUnread } from "@/services/inboxEvents";
 import { analytics } from "@/lib/analytics";
 import { isAdminSession } from "@/utils/jwt";
+import { isRouteVisibleInLaunch } from "@/config/launchScope";
 
-const navItems = [
+const allNavItems = [
   { name: "Overview", icon: Home, href: "/dashboard/overview" },
   { name: "My Music", icon: Music, href: "/dashboard/my-music" },
   { name: "Analytics", icon: BarChart3, href: "/dashboard/analytics" },
@@ -44,6 +45,9 @@ const navItems = [
   { name: "Referrals", icon: Users, href: "/dashboard/referrals" },
   { name: "Settings", icon: SettingsIcon, href: "/dashboard/settings/notifications" },
 ];
+
+/** Gated navigation items: hide unfinished / no-go routes (#775) */
+const navItems = allNavItems.filter((item) => isRouteVisibleInLaunch(item.href));
 
 /** Admin-only surfaces, appended to the nav for admin sessions (#420). */
 const adminNavItems = [{ name: "Artist Search", icon: Search, href: "/admin/artists" }];
