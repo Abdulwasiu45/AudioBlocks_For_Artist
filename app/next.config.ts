@@ -28,6 +28,40 @@ const nextConfig: NextConfig = {
     ],
     unoptimized: false,
   },
+  async headers() {
+    return [
+      {
+        // Static assets built with content hashes are immutable and can be cached indefinitely
+        source: "/_next/static/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        // Optimized images are cached with stale-while-revalidate
+        source: "/_next/image/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=604800",
+          },
+        ],
+      },
+      {
+        // Static public assets
+        source: "/(images|icons|fonts|audio)/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=604800",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default withSentryConfig(nextConfig, {

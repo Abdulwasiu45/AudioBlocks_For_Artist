@@ -61,9 +61,7 @@ export interface MiddlewareRequestLike {
   cookies: MiddlewareCookieReader;
 }
 
-export type MiddlewareDecision =
-  | { type: "next" }
-  | { type: "redirect"; redirectPath: string };
+export type MiddlewareDecision = { type: "next" } | { type: "redirect"; redirectPath: string };
 
 function decodeBase64Url(segment: string): string {
   try {
@@ -118,11 +116,8 @@ export function getMiddlewareDecision(req: MiddlewareRequestLike): MiddlewareDec
   }
 
   const privyToken =
-    req.cookies.get("privy-token")?.value ||
-    req.cookies.get("privy-session")?.value;
-  const appJwt =
-    req.cookies.get("audioblocks_jwt")?.value ||
-    req.cookies.get("token")?.value;
+    req.cookies.get("privy-token")?.value || req.cookies.get("privy-session")?.value;
+  const appJwt = req.cookies.get("audioblocks_jwt")?.value || req.cookies.get("token")?.value;
 
   const activeToken = privyToken || appJwt;
 
@@ -138,7 +133,50 @@ export function getMiddlewareDecision(req: MiddlewareRequestLike): MiddlewareDec
   return { type: "next" };
 }
 
+export function getCanonicalRedirect(request: NextRequest): NextResponse | null {
+  const canonicalHost = process.env.CANONICAL_HOST;
+  const rawHost =
+    request.headers.get("x-forwarded-host") || request.headers.get("host") || request.nextUrl.host;
+  const currentHost = rawHost.split(":")[0];
+  const proto =
+    request.headers.get("x-forwarded-proto") ||
+    (request.url.startsWith("https") ? "https" : "http");
+  const isProd = process.env.NODE_ENV === "production";
+
+  // Enforce canonical host redirection (301 permanent) if CANONICAL_HOST is set and differs
+  if (canonicalHost && currentHost && currentHost !== canonicalHost) {
+    const redirectUrl = new URL(
+      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+      `https://${canonicalHost}`
+    );
+    return NextResponse.redirect(redirectUrl, 301);
+  }
+
+  // Enforce HTTPS redirection in production when behind an HTTP proxy/load-balancer
+  if (
+    isProd &&
+    proto === "http" &&
+    !currentHost.includes("localhost") &&
+    !currentHost.includes("127.0.0.1")
+  ) {
+    const targetHost = canonicalHost || currentHost;
+    const redirectUrl = new URL(
+      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+      `https://${targetHost}`
+    );
+    return NextResponse.redirect(redirectUrl, 301);
+  }
+
+  return null;
+}
+
 export function middleware(request: NextRequest) {
+  // 1. Check canonical host and HTTPS redirects first
+  const canonicalRedirect = getCanonicalRedirect(request);
+  if (canonicalRedirect) {
+    return canonicalRedirect;
+  }
+
   const decision = getMiddlewareDecision(request);
   const isDev = process.env.NODE_ENV === "development";
   // Production nonces let Next.js mark its own inline scripts. Next reads the
@@ -147,18 +185,28 @@ export function middleware(request: NextRequest) {
   const nonce = isDev ? undefined : generateNonce();
   const csp = buildCsp({ isDev, nonce });
 
+  const applySecurityHeaders = (response: NextResponse) => {
+    response.headers.set("Content-Security-Policy-Report-Only", csp);
+    // HSTS: 2 years (63072000 seconds), includes all subdomains, eligible for preload list
+    if (!isDev) {
+      response.headers.set(
+        "Strict-Transport-Security",
+        "max-age=63072000; includeSubDomains; preload"
+      );
+    }
+    return response;
+  };
+
   if (decision.type === "redirect") {
     const redirectUrl = new URL(decision.redirectPath, request.url);
     const response = NextResponse.redirect(redirectUrl);
-    response.headers.set("Content-Security-Policy-Report-Only", csp);
-    return response;
+    return applySecurityHeaders(response);
   }
 
   const requestHeaders = new Headers(request.headers);
   if (nonce) requestHeaders.set("Content-Security-Policy", csp);
   const response = NextResponse.next({ request: { headers: requestHeaders } });
-  response.headers.set("Content-Security-Policy-Report-Only", csp);
-  return response;
+  return applySecurityHeaders(response);
 }
 
 export const config = {
