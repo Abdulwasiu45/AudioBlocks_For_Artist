@@ -33,7 +33,8 @@ test.describe("Payout view", () => {
 
     await page.getByLabel("Status").selectOption("completed");
     await expect(rows).toHaveCount(2);
-    await expect(page.getByRole("link", { name: "View" })).toHaveCount(2);
+    const table = page.locator("table");
+    await expect(table.getByRole("link", { name: "View", exact: true })).toHaveCount(2);
 
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: "Export CSV" }).click();

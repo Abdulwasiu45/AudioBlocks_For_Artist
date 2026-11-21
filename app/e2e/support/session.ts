@@ -1,8 +1,7 @@
 import type { Page } from "@playwright/test";
 
 /** Matches the JWT payload the dashboard reads for display/expiry only. */
-export const E2E_CLAIMS =
-  "eyJzdWIiOiJhcnRpc3QtZTJlIiwicm9sZSI6ImFydGlzdCIsImV4cCI6NDEwMjQ0NDgwMH0";
+export const E2E_CLAIMS = "eyJzdWIiOiJhcnRpc3QtZTJlIiwicm9sZSI6ImFydGlzdCIsImV4cCI6NDEwMjQ0NDgwMH0";
 export const E2E_TOKEN = `eyJhbGciOiJIUzI1NiJ9.${E2E_CLAIMS}.e2e-signature`;
 
 /**
@@ -21,6 +20,18 @@ export async function signInAsArtist(page: Page): Promise<void> {
     { name: "audioblocks_session_claims", value: E2E_CLAIMS, url: origin },
     { name: "audioblocks_2fa_enabled", value: "0", url: origin },
   ]);
+  // The dashboard's EmailVerificationGate holds children until this resolves,
+  // so stub it to keep every journey's first paint deterministic.
+  await page.route("**/api/backend/users/profile", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        success: true,
+        data: { id: "artist-e2e", username: "artist-e2e", emailVerified: true, role: "artist" },
+      }),
+    })
+  );
 }
 
 /** A tiny valid-enough file for client-side type/size validation. */

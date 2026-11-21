@@ -62,7 +62,7 @@ test.describe("Upload a song", () => {
     });
 
     await page.goto("/dashboard/upload-music");
-    await expect(page.getByRole("heading", { name: "Add Music" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Add Music", exact: true })).toBeVisible();
 
     await page.locator("#song-title").fill("E2E Midnight");
     await page.locator("#song-description").fill("A test track uploaded by the E2E suite.");
@@ -96,6 +96,8 @@ test.describe("Upload a song", () => {
       buffer: Buffer.from("not audio"),
     });
 
-    await expect(page.getByRole("alert")).toContainText("Unsupported file type");
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Unsupported file type" })
+    ).toBeVisible();
   });
 });

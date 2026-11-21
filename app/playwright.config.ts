@@ -19,6 +19,9 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     trace: "on-first-retry",
+    // The app registers a service worker; page.route cannot see requests it
+    // makes, which would let real backend calls leak into the journeys.
+    serviceWorkers: "block",
   },
   projects: [
     {

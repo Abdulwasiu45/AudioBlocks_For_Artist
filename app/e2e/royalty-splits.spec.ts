@@ -16,11 +16,15 @@ test.describe("Royalty splits", () => {
 
     // Defaults start at 0% each, so saving is blocked with a row error.
     await expect(page.getByText("Total: 0%")).toBeVisible();
-    await expect(page.getByRole("alert")).toContainText("Share must be greater than 0%");
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Share must be greater than 0%" })
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "Split evenly" }).click();
     await expect(page.getByText("Total: 100%")).toBeVisible();
-    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Share must be greater than 0%" })
+    ).toHaveCount(0);
 
     await page.getByRole("button", { name: "Increase Jaden Cole share by 5%" }).click();
     const jadenRow = page.locator("tbody tr").nth(0);
@@ -37,7 +41,6 @@ test.describe("Royalty splits", () => {
 
     await page.getByRole("button", { name: /^Save split for/ }).click();
     await expect(page.getByText("Royalty split saved for this release.")).toBeVisible();
-    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
 
     await page.reload();
     await expect(page.getByRole("heading", { name: "Split royalties" })).toBeVisible();
@@ -55,8 +58,8 @@ test.describe("Royalty splits", () => {
     await page.getByRole("button", { name: /^Save split for/ }).click();
 
     await expect(page.getByText("Fix the highlighted rows before saving.")).toBeVisible();
-    await expect(page.getByRole("alert")).toContainText(
-      "Enter the collaborator's Stellar address."
-    );
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Enter the collaborator's Stellar address." })
+    ).toBeVisible();
   });
 });

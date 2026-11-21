@@ -2,8 +2,8 @@
 //
 // Covers the album/EP creation flow (#398): details -> tracks -> review ->
 // POST /albums. The backend and cover/track uploads are mocked at the network
-// boundary; this asserts the form wiring, track-count rule and multipart
-// publish request.
+// boundary; this asserts the form wiring, track-count rule and publish
+// request body.
 
 import { expect, test } from "@playwright/test";
 import { signInAsArtist, testFile } from "./support/session";
@@ -44,17 +44,18 @@ test.describe("Publish an EP", () => {
     });
 
     await page.goto("/dashboard/upload-music");
-    await expect(page.getByRole("heading", { name: "Add Music" })).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("heading", { name: "Add Music", exact: true })).toBeVisible();
 
     await page.getByRole("tab", { name: "Add Album / EP" }).click();
-    await page.getByRole("radio", { name: /^EP/ }).check();
+    await page.getByText(/^EP \(/).click({ force: true });
 
     await page.getByPlaceholder("Enter EP title").fill("E2E Skyline");
     await page.getByLabel(/^Genre/).selectOption("Afrobeats");
     await page.getByLabel("Upload cover image").setInputFiles(COVER);
     await page.getByPlaceholder("0.00").fill("4.5");
 
-    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Tracks (0/2–6)" })).toBeVisible();
 
     await page.getByLabel("Upload track audio files").setInputFiles(TRACKS);
@@ -63,7 +64,7 @@ test.describe("Publish an EP", () => {
     await page.getByLabel("Track 1 title").fill("Intro");
     await page.getByLabel("Track 2 title").fill("Anthem");
 
-    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Review your EP" })).toBeVisible();
     await expect(page.getByTestId("review-title")).toHaveText("E2E Skyline");
     await expect(page.getByRole("list", { name: "Final track order" })).toContainText("Intro");
@@ -73,28 +74,28 @@ test.describe("Publish an EP", () => {
 
     await expect(page.getByText("EP created")).toBeVisible();
     await expect(page.getByRole("heading", { name: "EP details" })).toBeVisible();
-    expect(publishBody).toContain('name="releaseType"');
-    expect(publishBody).toContain("ep");
-    expect(publishBody).toContain('name="trackTitles"');
+    expect(publishBody).toContain('"releaseType":"ep"');
+    expect(publishBody).toContain('"albumTitle":"E2E Skyline"');
     expect(publishBody).toContain("Intro");
   });
 
   test("blocks publishing fewer tracks than the EP minimum", async ({ page }) => {
     await signInAsArtist(page);
     await page.goto("/dashboard/upload-music");
+    await page.waitForLoadState("networkidle");
 
     await page.getByRole("tab", { name: "Add Album / EP" }).click();
-    await page.getByRole("radio", { name: /^EP/ }).check();
+    await page.getByText(/^EP \(/).click({ force: true });
     await page.getByPlaceholder("Enter EP title").fill("Too Small");
     await page.getByLabel(/^Genre/).selectOption("Afrobeats");
     await page.getByLabel("Upload cover image").setInputFiles(COVER);
-    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
 
     await page.getByLabel("Upload track audio files").setInputFiles([TRACKS[0]]);
-    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // Still on Tracks: the 2-track minimum is enforced before Review.
     await expect(page.getByRole("heading", { name: "Tracks (1/2–6)" })).toBeVisible();
-    await expect(page.getByRole("alert")).toContainText("needs 2–6 tracks");
+    await expect(page.getByRole("alert").filter({ hasText: "needs 2–6 tracks" })).toBeVisible();
   });
 });

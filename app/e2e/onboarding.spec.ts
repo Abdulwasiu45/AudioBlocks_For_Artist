@@ -25,9 +25,10 @@ async function mockProfileUpdate(page: import("@playwright/test").Page) {
 }
 
 async function completeBasicInfo(page: import("@playwright/test").Page) {
+  await page.waitForLoadState("networkidle");
   await page.locator("#artistName").fill("E2E Artist");
   await page.locator("#bio").fill(LONG_BIO);
-  await page.getByRole("checkbox", { name: "Pop" }).check();
+  await page.getByText("Pop", { exact: true }).click();
   await page.locator("#website").fill("https://example.com/e2e-artist");
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByRole("heading", { name: "Verification & KYC" })).toBeVisible();
@@ -47,13 +48,14 @@ test.describe("Artist onboarding", () => {
     await mockProfileUpdate(page);
 
     await page.goto("/onboarding");
+    await page.waitForLoadState("networkidle");
     await expect(page.getByRole("heading", { name: "Welcome to AudioBlocks" })).toBeVisible();
 
     // Required fields keep Continue disabled until the form is valid.
     await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
     await page.locator("#artistName").fill("E2E Artist");
     await page.locator("#bio").fill("Too short");
-    await page.getByRole("checkbox", { name: "Pop" }).check();
+    await page.getByText("Pop", { exact: true }).click();
     await expect(page.getByText("Bio must be at least 50 characters")).toBeVisible();
     await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
 
