@@ -5,6 +5,7 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import Provider from "@/context/provider";
 import ThemeScript from "@/components/ThemeScript";
+import RuntimeConfigScript from "@/components/RuntimeConfigScript";
 import WebVitalsReporter from "@/components/WebVitalsReporter";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import { Toaster } from "sonner";
@@ -90,6 +91,7 @@ export default function RootLayout({
     // and `data-theme` on this element before React hydrates (#423).
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <RuntimeConfigScript />
         <ThemeScript />
         <WebVitalsReporter />
         <a
