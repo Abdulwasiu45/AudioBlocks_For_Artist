@@ -8,6 +8,7 @@ import ThemeScript from "@/components/ThemeScript";
 import RuntimeConfigScript from "@/components/RuntimeConfigScript";
 import WebVitalsReporter from "@/components/WebVitalsReporter";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import SupportFeedbackModal from "@/components/support/SupportFeedbackModal";
 import { Toaster } from "sonner";
 import { defaultMetadata } from "@/utils/metadata";
 
@@ -103,6 +104,7 @@ export default function RootLayout({
         <Provider>
           <OfflineIndicator />
           {children}
+          <SupportFeedbackModal />
           <Toaster
             position="top-right"
             expand
