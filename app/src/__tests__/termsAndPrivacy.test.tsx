@@ -11,9 +11,7 @@ describe("Terms and Privacy Pages & Acceptance (#778)", () => {
 
     expect(screen.getByRole("heading", { name: "Terms of Service" })).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`Version ${TERMS_VERSION}`, "i"))).toBeInTheDocument();
-    expect(
-      screen.getByText(new RegExp(`Effective Date: ${TERMS_EFFECTIVE_DATE}`, "i"))
-    ).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`Effective Date: ${TERMS_EFFECTIVE_DATE}`, "i"))).toBeInTheDocument();
 
     // Verify key sections
     expect(screen.getByText(/1\. Acceptance of Terms/i)).toBeInTheDocument();
@@ -27,9 +25,7 @@ describe("Terms and Privacy Pages & Acceptance (#778)", () => {
 
     expect(screen.getByRole("heading", { name: "Privacy Policy" })).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`Version ${PRIVACY_VERSION}`, "i"))).toBeInTheDocument();
-    expect(
-      screen.getByText(new RegExp(`Effective Date: ${PRIVACY_EFFECTIVE_DATE}`, "i"))
-    ).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`Effective Date: ${PRIVACY_EFFECTIVE_DATE}`, "i"))).toBeInTheDocument();
 
     // Verify key sections
     expect(screen.getByText(/1\. Information We Collect/i)).toBeInTheDocument();
@@ -50,3 +46,4 @@ describe("Terms and Privacy Pages & Acceptance (#778)", () => {
     expect(privacyLink).toHaveAttribute("href", "/privacy");
   });
 });
+
