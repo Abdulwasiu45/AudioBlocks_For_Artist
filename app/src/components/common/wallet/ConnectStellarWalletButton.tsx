@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useStellarWallet } from "./useStellarWallet";
 
 function truncate(address: string) {
@@ -8,11 +7,7 @@ function truncate(address: string) {
 }
 
 export default function ConnectStellarWalletButton() {
-  const { address, isConnecting, connect, restore, disconnect } = useStellarWallet();
-
-  useEffect(() => {
-    restore();
-  }, [restore]);
+  const { address, isConnecting, connect, disconnect } = useStellarWallet();
 
   if (address) {
     return (
