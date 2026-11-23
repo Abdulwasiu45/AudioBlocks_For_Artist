@@ -3,6 +3,7 @@ import { getCSRFToken, getCSRFTokenHeader, refreshCSRFToken } from "@/utils/csrf
 import { isRetryableError, calculateBackoff } from "@/utils/retry";
 import { apiMonitor } from "@/utils/apiPerformanceMonitor";
 import { API_PROXY_BASE_URL, endSession } from "@/api/session";
+import { reportApiAvailable, reportApiUnavailable } from "@/lib/apiAvailability";
 
 /**
  * Ends the browser session. The access token lives in an httpOnly cookie that
@@ -68,7 +69,7 @@ export function resetRedirectState(): void {
 
 /** Per-request config fields this module stamps onto the axios config. */
 type TrackedConfig = InternalAxiosRequestConfig & {
-  _retry?: number;
+  _retry?: boolean;
   _retryCount?: number;
   /** Set once a request is replayed after the proxy refreshed the session. */
   _sessionRetried?: boolean;
@@ -115,6 +116,7 @@ export const createApiClient = async (): Promise<AxiosInstance> => {
   apiClient.interceptors.response.use(
     (response: AxiosResponse) => {
       recordTiming(response.config as TrackedConfig);
+      reportApiAvailable();
 
       // Handle CSRF token refresh from server
       const newCsrfToken = response.headers["x-csrf-token"] as string | undefined;
@@ -127,6 +129,9 @@ export const createApiClient = async (): Promise<AxiosInstance> => {
       const config = error.config as TrackedConfig | undefined;
 
       recordTiming(config);
+      if (!axios.isCancel(error) && (!error.response || error.response.status >= 500)) {
+        reportApiUnavailable();
+      }
 
       // Handle CSRF token validation errors
       if (error.response?.status === 403 && typeof window !== "undefined") {
@@ -143,7 +148,11 @@ export const createApiClient = async (): Promise<AxiosInstance> => {
       if (error.response?.status === 401 && typeof window !== "undefined") {
         // The proxy renewed the session but could not replay a streamed upload.
         // Replay it once; the body is re-sendable on the client.
-        if (error.response.headers["x-session-refreshed"] === "1" && config && !config._sessionRetried) {
+        if (
+          error.response.headers["x-session-refreshed"] === "1" &&
+          config &&
+          !config._sessionRetried
+        ) {
           config._sessionRetried = true;
           return apiClient(config);
         }

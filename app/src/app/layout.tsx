@@ -11,6 +11,9 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import SupportFeedbackModal from "@/components/support/SupportFeedbackModal";
 import { Toaster } from "sonner";
 import { defaultMetadata } from "@/utils/metadata";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import BrandedErrorPage from "@/components/shared/BrandedErrorPage";
+import ApiUnavailableBanner from "@/components/ApiUnavailableBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,6 +32,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = defaultMetadata;
+export const dynamic = "force-dynamic";
 
 const REQUIRED_ENV_VARS = ["NEXT_PUBLIC_API_BASE_URL", "NEXT_PUBLIC_API_URL"];
 
@@ -103,7 +107,12 @@ export default function RootLayout({
         </a>
         <Provider>
           <OfflineIndicator />
-          {children}
+          <ApiUnavailableBanner />
+          <ErrorBoundary
+            fallback={({ reset }) => <BrandedErrorPage kind="error" onRetry={reset} />}
+          >
+            {children}
+          </ErrorBoundary>
           <SupportFeedbackModal />
           <Toaster
             position="top-right"
