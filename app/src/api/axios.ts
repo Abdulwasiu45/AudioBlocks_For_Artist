@@ -3,12 +3,19 @@ import { getCSRFToken, getCSRFTokenHeader, refreshCSRFToken } from "@/utils/csrf
 import { isRetryableError, calculateBackoff } from "@/utils/retry";
 import { apiMonitor } from "@/utils/apiPerformanceMonitor";
 import { API_PROXY_BASE_URL, endSession } from "@/api/session";
+import { newRequestId, REQUEST_ID_HEADER, requestIdFromHeaders } from "@/api/requestId";
+import { clearQueryCache } from "@/api/queryClientInstance";
 
 /**
  * Ends the browser session. The access token lives in an httpOnly cookie that
  * only the server can clear, so this asks the server to do it.
+ *
+ * Also drops cached dashboard data (#576) so a forced sign-out (401) can
+ * never leave the previous artist's earnings/messages in memory for whoever
+ * signs in next.
  */
 export function clearSession(): void {
+  clearQueryCache();
   void endSession();
 }
 
@@ -110,10 +117,14 @@ export function resetRedirectState(): void {
 /** Per-request config fields this module stamps onto the axios config. */
 type TrackedConfig = InternalAxiosRequestConfig & {
   _retryCount?: number;
+  /** Opt-in for automatic retry on a non-idempotent method (#574). */
+  retry?: boolean;
   /** Set once a request is replayed after the proxy refreshed the session. */
   _sessionRetried?: boolean;
   /** High-resolution timestamp set when the request left the client (#163). */
   _perfStart?: number;
+  /** Correlation id sent as `x-request-id`, reused across retries (OBS-04). */
+  _requestId?: string;
 };
 
 const now = (): number => (typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -148,6 +159,16 @@ export const createApiClient = async (): Promise<AxiosInstance> => {
     // Stamp the start time so the response / error interceptor can measure the
     // round trip (#163). Each retry attempt is timed separately.
     (config as TrackedConfig)._perfStart = now();
+
+    // OBS-04: one correlation id per logical request. A retry replays this
+    // config, so the id it already carries is kept rather than regenerated.
+    const tracked = config as TrackedConfig;
+    tracked._requestId = tracked._requestId ?? newRequestId();
+    if (typeof config.headers?.set === "function") {
+      config.headers.set(REQUEST_ID_HEADER, tracked._requestId);
+    } else {
+      Object.assign(config.headers, { [REQUEST_ID_HEADER]: tracked._requestId });
+    }
 
     return config;
   });
@@ -195,7 +216,10 @@ export const createApiClient = async (): Promise<AxiosInstance> => {
         if (!redirecting && !isCredentialRequest(config?.url)) {
           redirecting = true;
           clearSession();
-          window.location.href = "/login";
+          // Preserve the page the artist was on (#575) so a sign-in returns
+          // them there instead of always landing on /dashboard.
+          const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.href = `/login?returnTo=${returnTo}`;
           // Reset flag after redirect attempt
           setTimeout(() => {
             redirecting = false;
