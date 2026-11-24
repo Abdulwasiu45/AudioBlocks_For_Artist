@@ -9,10 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Blocking axe accessibility checks in CI** (#792): Added dedicated blocking axe audit step to GitHub Actions CI workflow for key pages and navigation components (`.github/workflows/ci.yml`).
-- **Upload flow and wallet modal keyboard pass** (#793): Manual audit and remediation report in `docs/accessibility/upload-and-wallet-a11y-pass.md` verifying keyboard traps, Escape dismissal, and screen reader live region announcements.
-- **Theme token color contrast audit** (#794): Comprehensive WCAG 2.1 AA audit of dark/light theme tokens in `docs/accessibility/theme-color-contrast-audit.md` with remediated subtle text contrast ratios.
-- **Global reduced motion preference support** (#795): Mounted `MotionConfig reducedMotion="user"` in the global context provider and added `@media (prefers-reduced-motion: reduce)` in `globals.css` with test verification in `ReducedMotion.test.tsx`.
+- **In-app "what's new" changelog modal** (#782): Accessible dialog (`WhatsNewModal`) triggered from the top header or on initial load with latest release highlights, 'Don't show again' persistence via localStorage, and direct links to full release notes.
+- **Accessibility statement page** (#785): Published WCAG 2.1 AA conformance statement, detailed accommodation measures, and direct feedback routing at `/accessibility` and `/dashboard/accessibility` (`app/src/components/AccessibilityStatement.tsx`).
+- **Third-party script inventory and DPAs** (#786): Comprehensive compliance register in `docs/third-party-script-inventory.md` documenting Sentry, Privy, Freighter, IPFS, AWS S3, and RPC providers with executed DPAs, transfer safeguards, and retention rules.
+- **Frontend production runbook** (#787): Detailed operations runbook in `docs/frontend-production-runbook.md` covering environment variables, Vercel deployments, instant edge rollbacks, and incident triage commands.
 
 - **Accessible upload progress** (#672): The song upload bar is now a `role="progressbar"` with `aria-valuemin/max/now`, a file-named label and `aria-valuetext` ("Uploading song.mp3, 45%"). A polite live region announces the 25/50/75/100% milestones plus success, failure, cancel and retry — not every percent — and the bar drops its transition under `prefers-reduced-motion`.
 - **Track edit modal — metadata and unsaved-changes guard** (#396): The My Music "Edit track" modal now edits genre (same list as upload, optional) and description (live N/500 counter) alongside title, album and visibility; genre/description are only sent when changed. Closing with unsaved edits (Cancel, X, Escape, outside click) asks "Discard unsaved changes?" instead of silently dropping them. Title shows a live N/100 counter.
@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **On-chain plays and sales in analytics** (#467): `lib/subgraph.ts` reads daily per-artist rollups from the Artist Portal subgraph (dependency-free GraphQL-over-POST, 8s timeout, no retry) and `services/onchainAnalyticsService.ts` caches them under a shared `onchainStats` key. A new section at the bottom of the analytics dashboard shows plays, sales and sale volume, and labels how far behind the indexer is instead of presenting lagging totals as live. Unset `NEXT_PUBLIC_SUBGRAPH_URL` and the section quietly disappears.
 - **Release notes page** (#468): `/dashboard/changelog` renders this file, parsed at build time by `lib/changelog.ts` into a timeline grouped by change type (`ChangelogTimeline`), linked from the sidebar. Single source of truth: a changelog entry is a release note, and the page degrades to "not available for this deployment" rather than 500ing when the file isn't shipped.
 - **Rollout feature flags** (#469): `FEATURE_FLAGS` plus `isFeatureEnabled()` in `lib/featureFlags.ts` gate a feature per artist by allowlist and a stable percentage bucket, overridable per deployment via `NEXT_PUBLIC_FEATURE_FLAGS` and per browser through `setFeatureFlagOverride` (localStorage, `audioblocks:feature-flags:v1`). `useFeatureFlag` applies the stored override after mount so client and server markup agree. The on-chain analytics section is the first flag, `artistOnchainAnalytics`, at 0%.
+
+- **Funnel metrics** (#764): `onboarding_step_completed` and `onboarding_completed` events (only on a real incomplete → complete transition) plus documented onboarding and upload funnels and dashboard spec in `lib/ANALYTICS.md`.
+- **Session replay decision** (#765): ADR-0006 keeps Sentry Replay mask-by-default; the policy now lives in `lib/sentryReplay.ts` with a test that fails if masking is loosened.
+- **Production hosting decision** (#766): ADR-0007 (proposed: Vercel, Docker as fallback) and `docs/DEPLOYMENT.md` with environment checklist.
+- **Deploy workflow** (#767): `.github/workflows/deploy.yml` deploys staging on merge to `main` and production on a `vX.Y.Z` tag behind a required-reviewer environment.
 
 ### Changed
 
