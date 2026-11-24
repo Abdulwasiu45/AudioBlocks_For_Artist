@@ -1,4 +1,5 @@
 import freighterApi from "@stellar/freighter-api";
+import { assertBackendStellarNetworkMatchesConfigured } from "@/lib/stellarNetwork";
 
 export type FreighterRecoveryState = "missing" | "locked" | "wrong-network" | "rejected" | "other";
 

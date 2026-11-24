@@ -51,6 +51,7 @@ export default function MintSongButton({
   const submitMutation = useSubmitSongMint(songId);
   const { estimate: gasEstimate } = useEstimatedFee();
   const freighterCheck = useFreighterNetworkCheck();
+  const { requestReview, reviewDialog } = useTransactionSignReview();
 
   const [status, setStatus] = useState<MintStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -117,6 +118,16 @@ export default function MintSongButton({
         setFreighterFailure(freighterCheck.status);
         return;
       }
+
+      setStatus("idle");
+      const approved = await requestReview({
+        action: "Mint song NFT",
+        amount: "1 song NFT (no XLM transfer)",
+        recipient: address,
+        contract: "AudioBlocks Catalog contract",
+        fee: `${gasEstimate} (estimated)`,
+      });
+      if (!approved) return;
 
       setStatus("awaiting_signature");
       let signedXdr: string;
@@ -373,6 +384,7 @@ export default function MintSongButton({
         Mint on-chain
       </button>
       <p className="text-[10px] text-gray-500">Est. gas: {gasEstimate}</p>
+      {reviewDialog}
     </div>
   );
 }

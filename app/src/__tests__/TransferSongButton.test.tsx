@@ -183,6 +183,13 @@ describe("TransferSongButton", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /transfer song/i }));
 
+    const reviewDialog = await screen.findByRole("dialog", { name: /review transaction/i });
+    expect(reviewDialog).toHaveTextContent("1 song NFT (no XLM transfer)");
+    expect(reviewDialog).toHaveTextContent(RECIPIENT);
+    expect(reviewDialog).toHaveTextContent("AudioBlocks Catalog contract");
+    expect(mockSignTransactionXdr).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /continue to freighter/i }));
+
     await waitFor(() => {
       expect(screen.getByRole("status")).toBeInTheDocument();
       expect(screen.getByText(/transferred successfully/i)).toBeInTheDocument();
@@ -220,6 +227,8 @@ describe("TransferSongButton", () => {
       target: { value: RECIPIENT },
     });
     fireEvent.click(screen.getByRole("button", { name: /transfer song/i }));
+    await screen.findByRole("dialog", { name: /review transaction/i });
+    fireEvent.click(screen.getByRole("button", { name: /continue to freighter/i }));
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toBeInTheDocument();
