@@ -66,6 +66,11 @@ describe("sanitizeReturnTo", () => {
     expect(sanitizeReturnTo("evil.com")).toBe("/dashboard");
   });
 
+  it("rejects /login and /signup so a redirect can't loop back to auth (#575)", () => {
+    expect(sanitizeReturnTo("/login")).toBe("/dashboard");
+    expect(sanitizeReturnTo("/signup")).toBe("/dashboard");
+  });
+
   // ── Type safety ──────────────────────────────────────────────────────────────
 
   it("handles non-string input gracefully (cast via any)", () => {

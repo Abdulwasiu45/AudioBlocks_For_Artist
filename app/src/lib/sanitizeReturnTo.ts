@@ -3,8 +3,9 @@
  * in a redirect.  Accepts any path that starts with "/" but rejects:
  *   - non-string values
  *   - empty strings
- *   - protocol-relative URLs (`//evil.com`, `/\evil.com`)
+ *   - protocol-relative or backslash URLs (`//evil.com`, `/\evil.com`, anywhere)
  *   - everything that does not start with "/"
+ *   - `/login` and `/signup` (#575), so a chain of post-login redirects can't loop
  *
  * Returns `/dashboard` for any rejected value so callers always have a safe
  * fallback without branching.
@@ -19,7 +20,9 @@ export function sanitizeReturnTo(path: string): string {
     typeof path !== "string" ||
     !path.startsWith("/") ||
     path.startsWith("//") ||
-    path.startsWith("/\\")
+    path.includes("\\") ||
+    path === "/login" ||
+    path === "/signup"
   ) {
     return "/dashboard";
   }
