@@ -22,16 +22,20 @@ import { Loader2, Check, AlertCircle } from "lucide-react";
 import useOnchainServices from "@/services/onchainService";
 import { useStellarWallet } from "./useStellarWallet";
 import { isFreighterAvailable, signTransactionXdr } from "@/lib/freighter";
+import { useEstimatedFee } from "@/hooks/useEstimatedFee";
+import { useTransactionSignReview } from "./TransactionSignReview";
 
 interface BatchMintSongsButtonProps {
   songIds: string[];
 }
 
-type SongMintState = "pending" | "minting" | "success" | "failed";
+type SongMintState = "pending" | "minting" | "success" | "failed" | "cancelled";
 
 export default function BatchMintSongsButton({ songIds }: BatchMintSongsButtonProps) {
   const { address } = useStellarWallet();
   const services = useOnchainServices();
+  const { estimate: gasEstimate } = useEstimatedFee();
+  const { requestReview, reviewDialog } = useTransactionSignReview();
   const [isRunning, setIsRunning] = useState(false);
   const [states, setStates] = useState<Record<string, SongMintState>>({});
   const [errorMessage, setErrorMessage] = useState("");
@@ -50,6 +54,17 @@ export default function BatchMintSongsButton({ songIds }: BatchMintSongsButtonPr
         // Sequential by design: each mint requires its own Freighter
         // signature prompt until a real batch endpoint exists (see header).
         const prepared = await services.usePrepareSongMint(songId).mutateAsync({});
+        const approved = await requestReview({
+          action: "Mint song NFT",
+          amount: "1 song NFT (no XLM transfer)",
+          recipient: address,
+          contract: "AudioBlocks Catalog contract",
+          fee: `${gasEstimate} (estimated)`,
+        });
+        if (!approved) {
+          setStates((prev) => ({ ...prev, [songId]: "cancelled" }));
+          break;
+        }
         const signedXdr = await signTransactionXdr(
           prepared.data.xdr,
           prepared.data.networkPassphrase,
@@ -87,6 +102,8 @@ export default function BatchMintSongsButton({ songIds }: BatchMintSongsButtonPr
         </p>
       )}
 
+      {reviewDialog}
+
       {Object.keys(states).length > 0 && (
         <ul className="text-xs text-[#9A9A9A] space-y-1">
           {songIds.map((id) => (
@@ -94,6 +111,7 @@ export default function BatchMintSongsButton({ songIds }: BatchMintSongsButtonPr
               {states[id] === "success" && <Check className="h-3 w-3 text-green-500" />}
               {states[id] === "failed" && <AlertCircle className="h-3 w-3 text-red-500" />}
               {states[id] === "minting" && <Loader2 className="h-3 w-3 animate-spin" />}
+              {states[id] === "cancelled" && <span className="text-zinc-400">Cancelled:</span>}
               {id}
             </li>
           ))}

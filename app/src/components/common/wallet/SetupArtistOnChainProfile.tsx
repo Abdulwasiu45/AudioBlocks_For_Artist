@@ -11,6 +11,7 @@ import { classifyError, isUserRejection } from "@/utils/errorRecovery";
 import { toast } from "sonner";
 import { ApiEnvelope, SubmitArtistSetupResponse } from "@/types/api";
 import { useEstimatedFee } from "@/hooks/useEstimatedFee";
+import { useTransactionSignReview } from "./TransactionSignReview";
 
 type SetupStatus =
   | "idle"
@@ -29,6 +30,7 @@ export default function SetupArtistOnChainProfile() {
   const [cid, setCid] = useState("");
   const { address } = useStellarWallet();
   const { usePrepareArtistSetup, useSubmitArtistSetup } = useOnchainServices();
+  const { requestReview, reviewDialog } = useTransactionSignReview();
   const prepareMutation = usePrepareArtistSetup();
   const submitMutation = useSubmitArtistSetup();
   const { estimate: gasEstimate } = useEstimatedFee();
@@ -75,6 +77,15 @@ export default function SetupArtistOnChainProfile() {
 
     try {
       const prepared = await prepareMutation.mutateAsync({ cid: cid.trim() });
+      setStatus("idle");
+      const approved = await requestReview({
+        action: "Set up artist profile",
+        amount: "1 artist profile NFT (no XLM transfer)",
+        recipient: address,
+        contract: "AudioBlocks Artist Profile contract",
+        fee: `${gasEstimate} (estimated)`,
+      });
+      if (!approved) return;
 
       setStatus("awaiting_signature");
       let signedXdr: string;
@@ -255,6 +266,7 @@ export default function SetupArtistOnChainProfile() {
           <p className="text-[10px] text-gray-500">Est. gas: {gasEstimate}</p>
         </div>
       )}
+      {reviewDialog}
     </div>
   );
 }
