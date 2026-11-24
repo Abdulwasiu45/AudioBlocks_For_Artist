@@ -6,6 +6,7 @@ import "slick-carousel/slick/slick-theme.css";
 import Provider from "@/context/provider";
 import ThemeScript from "@/components/ThemeScript";
 import RuntimeConfigScript from "@/components/RuntimeConfigScript";
+import StellarNetworkBanner from "@/components/StellarNetworkBanner";
 import WebVitalsReporter from "@/components/WebVitalsReporter";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import SupportFeedbackModal from "@/components/support/SupportFeedbackModal";
@@ -104,6 +105,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <RuntimeConfigScript />
         <ThemeScript />
+        <StellarNetworkBanner />
         <WebVitalsReporter />
         <a
           href="#main-content"
