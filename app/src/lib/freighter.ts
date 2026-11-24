@@ -1,4 +1,5 @@
 import freighterApi from "@stellar/freighter-api";
+import { assertBackendStellarNetworkMatchesConfigured } from "@/lib/stellarNetwork";
 
 export class FreighterNotInstalledError extends Error {
   constructor() {
@@ -61,6 +62,7 @@ export async function signTransactionXdr(
   networkPassphrase: string,
   address: string
 ): Promise<string> {
+  assertBackendStellarNetworkMatchesConfigured(networkPassphrase);
   const { signedTxXdr, error } = await freighterApi.signTransaction(xdr, {
     networkPassphrase,
     address,

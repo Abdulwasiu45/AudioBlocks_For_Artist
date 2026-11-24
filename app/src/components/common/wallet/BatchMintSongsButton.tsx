@@ -34,10 +34,12 @@ export default function BatchMintSongsButton({ songIds }: BatchMintSongsButtonPr
   const services = useOnchainServices();
   const [isRunning, setIsRunning] = useState(false);
   const [states, setStates] = useState<Record<string, SongMintState>>({});
+  const [errorMessage, setErrorMessage] = useState("");
 
   const runBatch = async () => {
     if (!address || !(await isFreighterAvailable())) return;
     setIsRunning(true);
+    setErrorMessage("");
     const nextStates: Record<string, SongMintState> = {};
     songIds.forEach((id) => (nextStates[id] = "pending"));
     setStates({ ...nextStates });
@@ -55,8 +57,9 @@ export default function BatchMintSongsButton({ songIds }: BatchMintSongsButtonPr
         );
         await services.useSubmitSongMint(songId).mutateAsync({ signedXdr });
         setStates((prev) => ({ ...prev, [songId]: "success" }));
-      } catch {
+      } catch (error: unknown) {
         setStates((prev) => ({ ...prev, [songId]: "failed" }));
+        if (error instanceof Error) setErrorMessage(error.message);
       }
     }
     setIsRunning(false);
@@ -77,6 +80,12 @@ export default function BatchMintSongsButton({ songIds }: BatchMintSongsButtonPr
           ? `Minting ${doneCount}/${songIds.length}...`
           : `Batch mint ${songIds.length} song${songIds.length === 1 ? "" : "s"}`}
       </button>
+
+      {errorMessage && (
+        <p role="alert" className="text-xs text-red-400">
+          {errorMessage}
+        </p>
+      )}
 
       {Object.keys(states).length > 0 && (
         <ul className="text-xs text-[#9A9A9A] space-y-1">
