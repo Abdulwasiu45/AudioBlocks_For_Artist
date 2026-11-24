@@ -20,8 +20,6 @@ import { colorTokens } from "@/theme/colors";
 import { getDisplayNameFromToken } from "@/utils/jwt";
 import { formatMoney } from "@/utils/money";
 import { useCurrencyPreference } from "@/context/CurrencyPreferenceContext";
-import { formatMoney } from "@/utils/money";
-import { useCurrencyPreference } from "@/context/CurrencyPreferenceContext";
 
 const PRINT_TARGET_ID = "earnings-report-print";
 const PRINT_BODY_CLASS = "printing-earnings-report";

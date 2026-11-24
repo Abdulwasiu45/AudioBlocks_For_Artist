@@ -13,6 +13,7 @@ doc goes deeper on _when to use which layer_ and _how to write one_.
 | Integration      | Vitest + React Testing Library | `*.integration.test.tsx`       | A component wired to real providers (React Query, etc.) against a mocked API layer, exercising the actual data-fetching path. |
 | End-to-end (E2E) | Playwright                     | `e2e/*.spec.ts`                | A full user flow in a real browser against the running Next.js app, with network calls intercepted via `page.route()`.        |
 | Accessibility    | Vitest + `vitest-axe`          | e.g. `*Accessibility.test.tsx` | Automated a11y violation checks (`toHaveNoViolations()`) layered on top of component tests.                                   |
+| Visual Regression| Chromatic + Storybook          | `*.stories.tsx`                | Captures visual snapshots of UI components across viewports and themes, detecting unintended pixel regressions.                |
 
 Rule of thumb: reach for the _lowest_ layer that can actually catch the bug.
 A pure function bug belongs in a unit test, not an E2E flow — it's faster to
@@ -98,6 +99,18 @@ component, run axe against the container, assert no violations. New
 interactive components should get a matching a11y test — see
 `CONTRIBUTING.md`'s Accessibility section and `app/ACCESSIBILITY_ISSUES.md`
 for the broader a11y bar this project holds itself to.
+
+### Visual regression tests (Chromatic + Storybook)
+
+Visual snapshots verify component appearance across viewports, themes, and interactions. Storybook stories live alongside components in `src/components/*.stories.tsx` (e.g. `DashboardLayout.stories.tsx`, `MyAlbums.stories.tsx`, `MyMusicContent.stories.tsx`, `TopHeader.stories.tsx`, `MerchesContent.stories.tsx`).
+
+```bash
+npm run storybook        # Start local Storybook development server
+npm run storybook:build  # Build static Storybook site into storybook-static
+npm run chromatic        # Run Chromatic visual regression test
+```
+
+Visual regression checks are automated in CI via `.github/workflows/chromatic.yml` using `chromaui/action@v11`, testing for unexpected pixel changes on PRs.
 
 ## Conventions
 
