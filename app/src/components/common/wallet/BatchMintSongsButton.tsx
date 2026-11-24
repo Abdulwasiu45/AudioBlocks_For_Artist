@@ -21,7 +21,13 @@ import { useState } from "react";
 import { Loader2, Check, AlertCircle } from "lucide-react";
 import useOnchainServices from "@/services/onchainService";
 import { useStellarWallet } from "./useStellarWallet";
-import { isFreighterAvailable, signTransactionXdr } from "@/lib/freighter";
+import {
+  classifyFreighterError,
+  isFreighterAvailable,
+  signTransactionXdr,
+  type FreighterRecoveryState,
+} from "@/lib/freighter";
+import FreighterRecoveryNotice from "./FreighterRecoveryNotice";
 
 interface BatchMintSongsButtonProps {
   songIds: string[];
@@ -34,15 +40,26 @@ export default function BatchMintSongsButton({ songIds }: BatchMintSongsButtonPr
   const services = useOnchainServices();
   const [isRunning, setIsRunning] = useState(false);
   const [states, setStates] = useState<Record<string, SongMintState>>({});
+  const [freighterFailure, setFreighterFailure] = useState<FreighterRecoveryState | null>(null);
+  const [failedSongId, setFailedSongId] = useState<string | null>(null);
 
-  const runBatch = async () => {
-    if (!address || !(await isFreighterAvailable())) return;
+  const runBatch = async (retryFromSongId?: string) => {
+    if (!address) return;
+    if (!(await isFreighterAvailable())) {
+      setFreighterFailure("missing");
+      setFailedSongId(retryFromSongId ?? null);
+      return;
+    }
     setIsRunning(true);
-    const nextStates: Record<string, SongMintState> = {};
-    songIds.forEach((id) => (nextStates[id] = "pending"));
-    setStates({ ...nextStates });
+    setFreighterFailure(null);
+    if (!retryFromSongId) {
+      const nextStates: Record<string, SongMintState> = {};
+      songIds.forEach((id) => (nextStates[id] = "pending"));
+      setStates({ ...nextStates });
+    }
+    const startIndex = retryFromSongId ? Math.max(0, songIds.indexOf(retryFromSongId)) : 0;
 
-    for (const songId of songIds) {
+    for (const songId of songIds.slice(startIndex)) {
       setStates((prev) => ({ ...prev, [songId]: "minting" }));
       try {
         // Sequential by design: each mint requires its own Freighter
@@ -55,8 +72,15 @@ export default function BatchMintSongsButton({ songIds }: BatchMintSongsButtonPr
         );
         await services.useSubmitSongMint(songId).mutateAsync({ signedXdr });
         setStates((prev) => ({ ...prev, [songId]: "success" }));
-      } catch {
+        setFailedSongId(null);
+      } catch (error: unknown) {
         setStates((prev) => ({ ...prev, [songId]: "failed" }));
+        const recoveryState = classifyFreighterError(error);
+        if (recoveryState !== "other") {
+          setFreighterFailure(recoveryState);
+          setFailedSongId(songId);
+          break;
+        }
       }
     }
     setIsRunning(false);
@@ -67,7 +91,7 @@ export default function BatchMintSongsButton({ songIds }: BatchMintSongsButtonPr
   return (
     <div className="flex flex-col gap-2">
       <button
-        onClick={runBatch}
+        onClick={() => void runBatch()}
         disabled={isRunning || songIds.length === 0}
         className={`${
           isRunning ? "opacity-70 cursor-not-allowed" : ""
@@ -77,6 +101,16 @@ export default function BatchMintSongsButton({ songIds }: BatchMintSongsButtonPr
           ? `Minting ${doneCount}/${songIds.length}...`
           : `Batch mint ${songIds.length} song${songIds.length === 1 ? "" : "s"}`}
       </button>
+
+      {freighterFailure && freighterFailure !== "other" && (
+        <FreighterRecoveryNotice
+          state={freighterFailure}
+          onRetry={() => {
+            setFreighterFailure(null);
+            void runBatch(failedSongId ?? undefined);
+          }}
+        />
+      )}
 
       {Object.keys(states).length > 0 && (
         <ul className="text-xs text-[#9A9A9A] space-y-1">
