@@ -2,6 +2,10 @@ import { useCallback, useState } from "react";
 import { connectFreighter, getFreighterAddress, signTransactionXdr } from "@/lib/freighter";
 import useOnchainServices from "@/services/onchainService";
 import { useHandleError, useHandleSuccess } from "@/hooks/useToastHandler";
+import {
+  useTransactionSignReview,
+  type TransactionSignSummary,
+} from "./TransactionSignReview";
 
 /**
  * Connects Freighter, persists the address on the backend, and exposes a
@@ -15,6 +19,7 @@ export function useStellarWallet() {
   const [isConnecting, setIsConnecting] = useState(false);
   const handleSuccess = useHandleSuccess();
   const handleError = useHandleError();
+  const { requestReview, reviewDialog } = useTransactionSignReview();
 
   const { useConnectWallet } = useOnchainServices();
   const connectWalletMutation = useConnectWallet();
@@ -61,14 +66,17 @@ export function useStellarWallet() {
   const signAndSubmit = useCallback(
     async (
       prepared: { xdr: string; networkPassphrase: string },
-      submit: (vars: { signedXdr: string }) => Promise<unknown>
+      submit: (vars: { signedXdr: string }) => Promise<unknown>,
+      summary: TransactionSignSummary
     ) => {
       if (!address) throw new Error("Connect a Stellar wallet first.");
+      const approved = await requestReview(summary);
+      if (!approved) throw new Error("Transaction review cancelled; no signature was requested.");
       const signedXdr = await signTransactionXdr(prepared.xdr, prepared.networkPassphrase, address);
       return submit({ signedXdr });
     },
-    [address]
+    [address, requestReview]
   );
 
-  return { address, isConnecting, connect, restore, disconnect, signAndSubmit };
+  return { address, isConnecting, connect, restore, disconnect, signAndSubmit, reviewDialog };
 }

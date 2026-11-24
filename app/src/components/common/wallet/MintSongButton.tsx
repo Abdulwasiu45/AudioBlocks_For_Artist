@@ -13,6 +13,7 @@ import { Loader2, Check, AlertCircle } from "lucide-react";
 import { ApiEnvelope, SubmitSongMintResponse } from "@/types/api";
 import { useEstimatedFee } from "@/hooks/useEstimatedFee";
 import { useFreighterNetworkCheck } from "@/hooks/useFreighterNetworkCheck";
+import { useTransactionSignReview } from "./TransactionSignReview";
 
 interface MintSongButtonProps {
   songId: string;
@@ -49,6 +50,7 @@ export default function MintSongButton({
   const submitMutation = useSubmitSongMint(songId);
   const { estimate: gasEstimate } = useEstimatedFee();
   const freighterCheck = useFreighterNetworkCheck();
+  const { requestReview, reviewDialog } = useTransactionSignReview();
 
   const [status, setStatus] = useState<MintStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -102,6 +104,16 @@ export default function MintSongButton({
         setErrorMsg(`Freighter network mismatch. Expected ${prepared.data.networkPassphrase === "Test SDF Network ; September 2015" ? "Testnet" : "Mainnet"}.`);
         return;
       }
+
+      setStatus("idle");
+      const approved = await requestReview({
+        action: "Mint song NFT",
+        amount: "1 song NFT (no XLM transfer)",
+        recipient: address,
+        contract: "AudioBlocks Catalog contract",
+        fee: `${gasEstimate} (estimated)`,
+      });
+      if (!approved) return;
 
       setStatus("awaiting_signature");
       let signedXdr: string;
@@ -337,6 +349,7 @@ export default function MintSongButton({
         Mint on-chain
       </button>
       <p className="text-[10px] text-gray-500">Est. gas: {gasEstimate}</p>
+      {reviewDialog}
     </div>
   );
 }
