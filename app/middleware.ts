@@ -90,17 +90,8 @@ export function isTokenExpired(token: string): boolean {
   }
 }
 
-export function sanitizeReturnTo(path: string): string {
-  if (
-    typeof path !== "string" ||
-    !path.startsWith("/") ||
-    path.startsWith("//") ||
-    path.startsWith("/\\")
-  ) {
-    return "/dashboard";
-  }
-  return path;
-}
+import { sanitizeReturnTo } from "@/lib/sanitizeReturnTo";
+export { sanitizeReturnTo };
 
 export function getMiddlewareDecision(req: MiddlewareRequestLike): MiddlewareDecision {
   const { pathname, search } = req.nextUrl;
