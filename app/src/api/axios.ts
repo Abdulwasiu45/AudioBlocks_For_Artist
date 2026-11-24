@@ -4,12 +4,18 @@ import { isRetryableError, calculateBackoff } from "@/utils/retry";
 import { apiMonitor } from "@/utils/apiPerformanceMonitor";
 import { API_PROXY_BASE_URL, endSession } from "@/api/session";
 import { newRequestId, REQUEST_ID_HEADER, requestIdFromHeaders } from "@/api/requestId";
+import { clearQueryCache } from "@/api/queryClientInstance";
 
 /**
  * Ends the browser session. The access token lives in an httpOnly cookie that
  * only the server can clear, so this asks the server to do it.
+ *
+ * Also drops cached dashboard data (#576) so a forced sign-out (401) can
+ * never leave the previous artist's earnings/messages in memory for whoever
+ * signs in next.
  */
 export function clearSession(): void {
+  clearQueryCache();
   void endSession();
 }
 
@@ -80,8 +86,9 @@ export function resetRedirectState(): void {
 
 /** Per-request config fields this module stamps onto the axios config. */
 type TrackedConfig = InternalAxiosRequestConfig & {
-  _retry?: number;
   _retryCount?: number;
+  /** Opt-in for automatic retry on a non-idempotent method (#574). */
+  retry?: boolean;
   /** Set once a request is replayed after the proxy refreshed the session. */
   _sessionRetried?: boolean;
   /** High-resolution timestamp set when the request left the client (#163). */
@@ -179,7 +186,10 @@ export const createApiClient = async (): Promise<AxiosInstance> => {
         if (!redirecting && !isCredentialRequest(config?.url)) {
           redirecting = true;
           clearSession();
-          window.location.href = "/login";
+          // Preserve the page the artist was on (#575) so a sign-in returns
+          // them there instead of always landing on /dashboard.
+          const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.href = `/login?returnTo=${returnTo}`;
           // Reset flag after redirect attempt
           setTimeout(() => {
             redirecting = false;
@@ -187,28 +197,19 @@ export const createApiClient = async (): Promise<AxiosInstance> => {
         }
       }
 
-      // Retry logic for transient failures
-      if (isRetryableError(error) && config && !config._retry) {
-        config._retry = true;
+      // Retry logic for transient failures (#574): only safe/idempotent
+      // methods retry automatically, up to maxRetries total — `_retryCount`
+      // alone gates this now, so a 3rd/4th attempt is no longer skipped.
+      const method = (config?.method ?? "get").toUpperCase();
+      const retryEligible = ["GET", "HEAD", "OPTIONS"].includes(method) || config?.retry === true;
+      if (isRetryableError(error) && config && retryEligible) {
         const maxRetries = 3;
         const retryCount = config._retryCount || 0;
 
         if (retryCount < maxRetries) {
           config._retryCount = retryCount + 1;
           const delay = calculateBackoff(retryCount + 1, 1000);
-
-          // Show toast notification for retry
-          if (typeof window !== "undefined") {
-            const { toast } = await import("sonner");
-            toast.info(`Retrying request... (Attempt ${retryCount + 1}/${maxRetries})`, {
-              duration: delay,
-            });
-          }
-
-          // Wait for backoff delay
           await new Promise((resolve) => setTimeout(resolve, delay));
-
-          // Retry the request
           return apiClient(config);
         }
       }
