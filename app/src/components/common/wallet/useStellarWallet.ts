@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { connectFreighter, getFreighterAddress, signTransactionXdr } from "@/lib/freighter";
+import { classifyFreighterError, type FreighterRecoveryState } from "@/lib/freighter";
 import useOnchainServices from "@/services/onchainService";
 import { useHandleError, useHandleSuccess } from "@/hooks/useToastHandler";
 import {
@@ -17,6 +18,8 @@ import {
 export function useStellarWallet() {
   const [address, setAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionFailure, setConnectionFailure] = useState<FreighterRecoveryState | null>(null);
+  const [connectionFailureMessage, setConnectionFailureMessage] = useState("");
   const handleSuccess = useHandleSuccess();
   const handleError = useHandleError();
   const { requestReview, reviewDialog } = useTransactionSignReview();
@@ -32,6 +35,8 @@ export function useStellarWallet() {
 
   const connect = useCallback(async () => {
     setIsConnecting(true);
+    setConnectionFailure(null);
+    setConnectionFailureMessage("");
     try {
       const stellarPublicKey = await connectFreighter();
       await connectWalletMutation.mutateAsync({ stellarPublicKey });
@@ -40,6 +45,11 @@ export function useStellarWallet() {
       return stellarPublicKey;
     } catch (error: unknown) {
       const err = error as Error;
+      const recoveryState = classifyFreighterError(error);
+      if (recoveryState !== "other") {
+        setConnectionFailure(recoveryState);
+        setConnectionFailureMessage(err.message);
+      }
       handleError(err.message || "Failed to connect Freighter wallet.");
       throw err;
     } finally {
@@ -78,5 +88,14 @@ export function useStellarWallet() {
     [address, requestReview]
   );
 
-  return { address, isConnecting, connect, restore, disconnect, signAndSubmit, reviewDialog };
+  return {
+    address,
+    isConnecting,
+    connect,
+    restore,
+    disconnect,
+    signAndSubmit,
+    connectionFailure,
+    connectionFailureMessage,
+  };
 }

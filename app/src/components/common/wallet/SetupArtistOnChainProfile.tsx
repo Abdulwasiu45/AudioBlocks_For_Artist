@@ -5,13 +5,18 @@ import { useStellarWallet } from "./useStellarWallet";
 import useOnchainServices from "@/services/onchainService";
 import ConnectStellarWalletButton from "./ConnectStellarWalletButton";
 import { analytics } from "@/lib/analytics";
-import { isFreighterAvailable, signTransactionXdr } from "@/lib/freighter";
+import {
+  classifyFreighterError,
+  isFreighterAvailable,
+  signTransactionXdr,
+  type FreighterRecoveryState,
+} from "@/lib/freighter";
 import { explorerTxUrl } from "@/lib/horizon";
-import { classifyError, isUserRejection } from "@/utils/errorRecovery";
+import { classifyError } from "@/utils/errorRecovery";
 import { toast } from "sonner";
 import { ApiEnvelope, SubmitArtistSetupResponse } from "@/types/api";
 import { useEstimatedFee } from "@/hooks/useEstimatedFee";
-import { useTransactionSignReview } from "./TransactionSignReview";
+import FreighterRecoveryNotice from "./FreighterRecoveryNotice";
 
 type SetupStatus =
   | "idle"
@@ -37,6 +42,8 @@ export default function SetupArtistOnChainProfile() {
 
   const [status, setStatus] = useState<SetupStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [freighterFailure, setFreighterFailure] = useState<FreighterRecoveryState | null>(null);
+  const [freighterFailureMessage, setFreighterFailureMessage] = useState("");
   const [txHash, setTxHash] = useState("");
   const [cooldownActive, setCooldownActive] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(COOLDOWN_DURATION);
@@ -67,12 +74,14 @@ export default function SetupArtistOnChainProfile() {
 
     const available = await isFreighterAvailable();
     if (!available) {
-      setStatus("not_installed");
+      setFreighterFailure("missing");
       return;
     }
 
     setStatus("preparing");
     setErrorMsg("");
+    setFreighterFailure(null);
+    setFreighterFailureMessage("");
     analytics.mintStarted({ songId: "artist-profile", walletAddress: address });
 
     try {
@@ -98,9 +107,12 @@ export default function SetupArtistOnChainProfile() {
       } catch (signErr: unknown) {
         // A declined signature is a normal outcome, not a failure — see
         // app/src/utils/ERROR_RECOVERY.md.
-        if (isUserRejection(signErr)) {
-          setStatus("rejected");
-          analytics.mintFailed({ songId: "artist-profile", reason: "user rejected signature" });
+        const recoveryState = classifyFreighterError(signErr);
+        if (recoveryState !== "other") {
+          setStatus(recoveryState === "rejected" ? "rejected" : "failed");
+          setFreighterFailure(recoveryState);
+          setFreighterFailureMessage((signErr as Error).message);
+          analytics.mintFailed({ songId: "artist-profile", reason: (signErr as Error).message });
           return;
         }
         throw signErr;
@@ -123,6 +135,14 @@ export default function SetupArtistOnChainProfile() {
       });
       toast.success("Profile setup succeeded on-chain!");
     } catch (err: unknown) {
+      const recoveryState = classifyFreighterError(err);
+      if (recoveryState !== "other") {
+        setFreighterFailure(recoveryState);
+        setFreighterFailureMessage((err as Error).message);
+        setStatus(recoveryState === "rejected" ? "rejected" : "failed");
+        analytics.mintFailed({ songId: "artist-profile", reason: (err as Error).message });
+        return;
+      }
       const plan = classifyError(err);
       analytics.mintFailed({ songId: "artist-profile", reason: plan.message });
 
@@ -139,6 +159,13 @@ export default function SetupArtistOnChainProfile() {
 
   return (
     <div className="space-y-4 rounded-lg border border-[#2A2A2A] bg-[#161616] p-6">
+      {freighterFailure && freighterFailure !== "other" && (
+        <FreighterRecoveryNotice
+          state={freighterFailure}
+          message={freighterFailureMessage || undefined}
+          onRetry={handleSetup}
+        />
+      )}
       <div>
         <h3 className="text-white font-semibold mb-1">On-chain artist profile</h3>
         <p className="text-sm text-[#A3A3A3]">
