@@ -62,8 +62,10 @@ describe("Sidebar", () => {
     expect(screen.getByText("Events")).toBeInTheDocument();
     expect(screen.getByText("Merches")).toBeInTheDocument();
     expect(screen.getByText("Messages")).toBeInTheDocument();
-    expect(screen.getByText("Premium")).toBeInTheDocument();
+    expect(screen.getByText("Activity Log")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
+    // Unfinished/unbuilt routes are hidden from launch navigation (#775)
+    expect(screen.queryByText("Premium")).not.toBeInTheDocument();
 
     const links = screen.getAllByTestId("nav-link");
     expect(links.length).toBeGreaterThan(0);

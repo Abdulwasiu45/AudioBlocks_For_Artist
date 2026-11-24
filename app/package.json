@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "license": "ISC",
+  "engines": {
+    "node": ">=20.18.0 <21.0.0",
+    "npm": ">=10.0.0"
+  },
   "lint-staged": {
     "*.{ts,tsx}": [
       "eslint --fix",
