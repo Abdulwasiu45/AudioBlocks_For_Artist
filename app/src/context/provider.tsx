@@ -3,11 +3,13 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/api/queryClientInstance";
 import { ReactNode } from "react";
+import { MotionConfig } from "framer-motion";
 import { StellarNetworkProvider } from "./StellarNetworkContext";
 import { PlaybackProvider } from "./PlaybackContext";
 import { ThemeProvider } from "./ThemeContext";
 import PrivyProvider from "./PrivyProvider";
 import { CurrencyPreferenceProvider } from "./CurrencyPreferenceContext";
+import { StellarWalletProvider } from "@/components/common/wallet/StellarWalletProvider";
 
 const Provider = ({ children }: { children: ReactNode }) => {
   return (
@@ -16,7 +18,9 @@ const Provider = ({ children }: { children: ReactNode }) => {
         <ThemeProvider>
           <CurrencyPreferenceProvider>
             <StellarNetworkProvider>
-              <PlaybackProvider>{children}</PlaybackProvider>
+              <StellarWalletProvider>
+                <PlaybackProvider>{children}</PlaybackProvider>
+              </StellarWalletProvider>
             </StellarNetworkProvider>
           </CurrencyPreferenceProvider>
         </ThemeProvider>

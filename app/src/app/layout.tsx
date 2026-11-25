@@ -6,6 +6,7 @@ import "slick-carousel/slick/slick-theme.css";
 import Provider from "@/context/provider";
 import ThemeScript from "@/components/ThemeScript";
 import RuntimeConfigScript from "@/components/RuntimeConfigScript";
+import StellarNetworkBanner from "@/components/StellarNetworkBanner";
 import WebVitalsReporter from "@/components/WebVitalsReporter";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import SupportFeedbackModal from "@/components/support/SupportFeedbackModal";
@@ -15,14 +16,24 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import BrandedErrorPage from "@/components/shared/BrandedErrorPage";
 import ApiUnavailableBanner from "@/components/ApiUnavailableBanner";
 
+// PERF-07: next/font self-hosts these at build time, so the browser never
+// waits on a third-party font CDN, and a swap display strategy lets text paint
+// in the fallback while the file loads. `adjustFontFallback` (on by default) sizes
+// that fallback to the real face, which is what keeps the swap from shifting
+// layout — the CLS budget in src/lib/performanceBudgets.ts is what a
+// regression here would break.
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
 });
 
 export const viewport: Viewport = {
@@ -98,6 +109,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <RuntimeConfigScript />
         <ThemeScript />
+        <StellarNetworkBanner />
         <WebVitalsReporter />
         <a
           href="#main-content"

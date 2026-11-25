@@ -68,7 +68,7 @@ export const featureFlags = {
  *  3. the flag's allowlist (beta artists, matched case-insensitively);
  *  4. a stable percentage bucket of the subject.
  */
-export type FeatureFlagName = "artistOnchainAnalytics" | "teamManagement";
+export type FeatureFlagName = "artistOnchainAnalytics" | "teamManagement" | "maintenanceMode";
 
 export interface FeatureFlagDefinition {
   /** What the feature is, for whoever has to debug it later. */
@@ -89,6 +89,12 @@ export const FEATURE_FLAGS: Record<FeatureFlagName, FeatureFlagDefinition> = {
   teamManagement: {
     description:
       "Backend-enforced multi-user artist team workspace and staff access management (#525).",
+    rolloutPercentage: 0,
+    allowlist: [],
+  },
+  maintenanceMode: {
+    description:
+      "Planned maintenance banner and read-only mode notification (#781).",
     rolloutPercentage: 0,
     allowlist: [],
   },
