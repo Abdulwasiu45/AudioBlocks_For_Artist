@@ -9,6 +9,7 @@ import { PlaybackProvider } from "./PlaybackContext";
 import { ThemeProvider } from "./ThemeContext";
 import PrivyProvider from "./PrivyProvider";
 import { CurrencyPreferenceProvider } from "./CurrencyPreferenceContext";
+import { StellarWalletProvider } from "@/components/common/wallet/StellarWalletProvider";
 
 const Provider = ({ children }: { children: ReactNode }) => {
   return (
@@ -17,9 +18,9 @@ const Provider = ({ children }: { children: ReactNode }) => {
         <ThemeProvider>
           <CurrencyPreferenceProvider>
             <StellarNetworkProvider>
-              <MotionConfig reducedMotion="user">
+              <StellarWalletProvider>
                 <PlaybackProvider>{children}</PlaybackProvider>
-              </MotionConfig>
+              </StellarWalletProvider>
             </StellarNetworkProvider>
           </CurrencyPreferenceProvider>
         </ThemeProvider>
